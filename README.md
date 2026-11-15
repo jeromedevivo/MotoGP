@@ -1,72 +1,57 @@
-# MotoGP Project
+# Point de Corde
 
-## Description
+Compagnon d'analyse MotoGP en français : classements des pilotes par condition, fiches circuit complètes et prédictions de course qui tiennent compte de la météo.
 
-This project is a MotoGP application that provides information about upcoming races, rider standings, and more. It is built using modern web technologies such as React, TypeScript, and TailwindCSS.
+> Projet de fan indépendant, non affilié à MotoGP™ ni à Dorna.
 
-## Features
+## Ce que fait l'appli
 
-- **Upcoming Races**: View details about upcoming MotoGP races.
-- **Rider Standings**: Check the current standings of MotoGP riders.
-- **Race Predictions**: Make predictions for upcoming races.
-- **Live Timing**: Access live timing data during races.
+- **Prédictions** : probabilités de victoire, podium et top 5 pour chaque pilote, avec 8 facteurs expliqués (championnat, forme, moto, circuit, conditions, talent, qualif, fiabilité). La météo du week-end vient d'Open-Meteo, et un simulateur sec/mixte/mouillé permet de tester les scénarios. La prédiction répond en ~0,3 s.
+- **Pilotes** : 16 classements calculés sur tous les résultats depuis 2018 (MotoGP, Moto2, Moto3) : piste mouillée, sèche, chaleur, froid, talent à moto égale, qualification, remontées, régularité, abandons, sprint vs course, dynamique, effet domicile, circuits rapides/sinueux/gauche/droite. S'y ajoutent un duel face à face et une fiche pilote complète.
+- **Grands Prix** : tracé officiel, données techniques, records des 3 catégories extraits du PDF officiel (vitesse de pointe incluse), édition précédente, palmarès, conditions des éditions passées, spécialistes du tracé, programme et résultats de chaque session.
 
-## Project Structure
+## Lancer le projet
 
-- **Backend**: Contains the Python backend for handling data processing and API endpoints.
-- **Frontend**: Built with React and TypeScript, located in the `src/` directory.
-- **Public**: Static assets such as `robots.txt`.
+Prérequis : Node.js 18+ et Python 3.10+.
 
-## Installation
+```sh
+npm install
+pip install -r backend/requirements.txt
 
-### Prerequisites
+# terminal 1 : API (port 8000)
+cd backend && python -m uvicorn main:app --port 8000
 
-- Node.js and npm installed ([Install Node.js](https://nodejs.org/))
-- Python installed ([Install Python](https://www.python.org/))
+# terminal 2 : interface (port 8080, /api est proxifié vers le backend)
+npm run dev
+```
 
-### Steps
+**Premier lancement :** le backend télécharge tout l'historique depuis 2018 (environ 36 000 résultats). L'API officielle limite le débit, donc les requêtes sont espacées et l'opération prend une dizaine de minutes. Les pages affichent un message en attendant. Le jeu de données est ensuite gardé dans `backend/data/` et mis à jour toutes les 6 heures, uniquement pour les nouveaux GP. On peut forcer une mise à jour avec `POST /api/insights/refresh`.
 
-1. Clone the repository:
-   ```sh
-   git clone <YOUR_GIT_URL>
-   ```
+## Tests
 
-2. Navigate to the project directory:
-   ```sh
-   cd MotoGP
-   ```
+```sh
+cd backend && python -m pytest     # moteur d'analyse, dataset, PDF, météo, prédiction, API
+npm test                            # helpers front (Vitest)
+```
 
-3. Install frontend dependencies:
-   ```sh
-   npm install
-   ```
+## Architecture
 
-4. Install backend dependencies:
-   ```sh
-   cd backend
-   pip install -r requirements.txt
-   ```
+| Fichier | Rôle |
+|---|---|
+| `backend/history.py` | Construit le jeu de données (requêtes parallèles, rythme limité, retries sur 429, mises à jour incrémentales) |
+| `backend/analytics.py` | Classements des pilotes (fonctions pures, lissage bayésien des petits échantillons) |
+| `backend/predict.py` | Score explicable, température calibrée sur les courses passées, simulation des courses |
+| `backend/circuit_pdf.py` | Extraction des records depuis `CircuitInformation.pdf` |
+| `backend/weather.py` | Prévisions Open-Meteo du week-end |
+| `src/lib/insights.ts` | Client API et formatage côté front |
 
-5. Start the development server:
-   ```sh
-   npm run dev
-   ```
+## Documentation
 
-6. Start the backend server:
-   ```sh
-   cd backend
-   python main.py
-   ```
+- [`docs/PREDICTIONS.md`](docs/PREDICTIONS.md) : classements, facteurs de prédiction, calibration et météo
+- [`docs/API.md`](docs/API.md) : endpoints du backend
+- [`docs/RUNBOOK.md`](docs/RUNBOOK.md) : exploitation, premier lancement, limite de débit
+- [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) et [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)
 
-## Usage
+## Licence
 
-- Open the application in your browser at `http://localhost:3000`.
-- Access the backend API at `http://localhost:8000`.
-
-## Contributing
-
-Feel free to submit issues or pull requests to improve the project.
-
-## License
-
-This project is licensed under the MIT License.
+Code sous licence MIT (voir `LICENSE`). Les données et images restent la propriété de leurs ayants droit.
