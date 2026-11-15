@@ -13,12 +13,15 @@ export default {
 	theme: {
 		container: {
 			center: true,
-			padding: '2rem',
+			padding: '1rem',
 			screens: {
 				'2xl': '1400px'
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['"Archivo Variable"', 'system-ui', 'sans-serif']
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -63,13 +66,21 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
+				plate: {
+					DEFAULT: 'hsl(var(--plate))',
+					ink: 'hsl(var(--plate-ink))'
+				},
+				wet: 'hsl(var(--wet))',
+				gain: 'hsl(var(--gain))',
+				loss: 'hsl(var(--loss))',
+				// legacy aliases mapped onto the new world
 				racing: {
-					red: '#FF1E00',
-					yellow: '#FFC600',
-					blue: '#007BFF',
-					green: '#00CC66',
-					dark: '#1E1E24',
-					gray: '#CCCCCC'
+					red: 'hsl(var(--destructive))',
+					yellow: 'hsl(var(--plate))',
+					blue: 'hsl(var(--wet))',
+					green: 'hsl(var(--gain))',
+					dark: 'hsl(var(--foreground))',
+					gray: 'hsl(var(--muted-foreground))'
 				}
 			},
 			borderRadius: {

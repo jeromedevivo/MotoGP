@@ -1,146 +1,93 @@
-
 import React from "react";
-import { Rider } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { getCategories, getCurrentSeason, getEvents, getPredictions } from "@/lib/api";
 
-// Mock prediction data
-const MOCK_PREDICTIONS = [
-  {
-    rider: {
-      id: "rider-1",
-      full_name: "Francesco Bagnaia",
-      number: 1,
-      constructor: {
-        id: "const-1",
-        name: "Ducati",
-        legacy_id: 110
-      },
-      form: "ascending",
-      position: 1
-    } as Rider,
-    probability: 0.85,
-    form: "ascending" as const
-  },
-  {
-    rider: {
-      id: "rider-3",
-      full_name: "Marc Marquez",
-      number: 93,
-      constructor: {
-        id: "const-1",
-        name: "Ducati",
-        legacy_id: 110
-      },
-      form: "ascending",
-      position: 3
-    } as Rider,
-    probability: 0.75,
-    form: "ascending" as const
-  },
-  {
-    rider: {
-      id: "rider-2",
-      full_name: "Jorge Martin",
-      number: 89,
-      constructor: {
-        id: "const-1",
-        name: "Ducati",
-        legacy_id: 110
-      },
-      form: "stable",
-      position: 2
-    } as Rider,
-    probability: 0.70,
-    form: "stable" as const
-  },
-  {
-    rider: {
-      id: "rider-5",
-      full_name: "Brad Binder",
-      number: 33,
-      constructor: {
-        id: "const-2",
-        name: "KTM",
-        legacy_id: 111
-      },
-      form: "ascending",
-      position: 5
-    } as Rider,
-    probability: 0.60,
-    form: "ascending" as const
-  },
-  {
-    rider: {
-      id: "rider-4",
-      full_name: "Enea Bastianini",
-      number: 23,
-      constructor: {
-        id: "const-1",
-        name: "Ducati",
-        legacy_id: 110
-      },
-      form: "descending",
-      position: 4
-    } as Rider,
-    probability: 0.55,
-    form: "descending" as const
-  }
-];
+const PredictionWidget: React.FC = () => {
+  const seasonQuery = useQuery({ queryKey: ["current-season"], queryFn: getCurrentSeason });
+  const categoriesQuery = useQuery({
+    queryKey: ["categories", seasonQuery.data?.id],
+    queryFn: () => getCategories(seasonQuery.data!.id),
+    enabled: !!seasonQuery.data?.id,
+  });
+  const eventsQuery = useQuery({
+    queryKey: ["events", seasonQuery.data?.id, "all"],
+    queryFn: () => getEvents(seasonQuery.data!.id),
+    enabled: !!seasonQuery.data?.id,
+  });
+  const category = categoriesQuery.data?.find((item) => item.name.toLowerCase().includes("motogp"))
+    || categoriesQuery.data?.[0];
+  // next unfinished GP; once the season is over, the last one
+  const races = (eventsQuery.data ?? []).filter((e) => !(e as { test?: boolean }).test).sort((a, b) => a.date_start.localeCompare(b.date_start));
+  const event = races.find((e) => e.status !== "FINISHED") ?? races[races.length - 1];
+  const predictionsQuery = useQuery({
+    queryKey: ["predictions", event?.id, category?.id],
+    queryFn: () => getPredictions(event!.id, category!.id),
+    enabled: !!event?.id && !!category?.id,
+  });
 
-const PredictionWidget = () => {
   const getFormIcon = (form: string) => {
-    switch (form) {
-      case 'ascending':
-        return <TrendingUp className="h-4 w-4 text-green-500" />;
-      case 'descending':
-        return <TrendingDown className="h-4 w-4 text-red-500" />;
-      default:
-        return <ArrowRight className="h-4 w-4 text-gray-500" />;
-    }
+    if (form === "ascending") return <TrendingUp className="h-4 w-4 text-green-500" />;
+    if (form === "descending") return <TrendingDown className="h-4 w-4 text-red-500" />;
+    return <ArrowRight className="h-4 w-4 text-muted-foreground" />;
   };
+
+  const loading = seasonQuery.isLoading || categoriesQuery.isLoading || eventsQuery.isLoading
+    || predictionsQuery.isLoading;
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-bold">Race Winner Predictions</CardTitle>
-        <p className="text-sm text-muted-foreground">Italian Grand Prix</p>
+        <CardTitle className="text-lg font-bold">Favoris du prochain GP</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          {event?.sponsored_name || event?.name || "Next Grand Prix"}
+        </p>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[250px]">
-          <div className="space-y-2">
-            {MOCK_PREDICTIONS.map((prediction, index) => (
-              <Link 
-                key={prediction.rider.id} 
-                to={`/riders/${prediction.rider.id}`}
-                className="block hover:bg-gray-50 rounded-md transition-colors"
-              >
-                <div className="flex items-center justify-between p-2">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-racing-red text-white font-bold">
-                      {index + 1}
+        {loading && <p className="py-8 text-center text-sm text-muted-foreground">Loading predictions...</p>}
+        {!loading && predictionsQuery.error && (
+          <p className="py-8 text-center text-sm text-red-600">Predictions unavailable for this race.</p>
+        )}
+        {!loading && !predictionsQuery.error && predictionsQuery.data?.length === 0 && (
+          <p className="py-8 text-center text-sm text-muted-foreground">No predictions available.</p>
+        )}
+        {!loading && predictionsQuery.data && predictionsQuery.data.length > 0 && (
+          <>
+            <ScrollArea className="h-[250px]">
+              <div className="space-y-2">
+                {predictionsQuery.data.map((prediction, index) => (
+                  <Link
+                    key={prediction.rider.id}
+                    to={`/riders/${prediction.rider.id}`}
+                    className="block rounded-md transition-colors hover:bg-muted"
+                  >
+                    <div className="flex items-center justify-between p-2">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-racing-red font-bold text-white">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <div className="font-medium">{prediction.rider.full_name}</div>
+                          <div className="text-sm text-muted-foreground">{prediction.rider.constructor?.name}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="mr-2 text-sm font-medium">
+                          {(prediction.probability * 100).toFixed(0)}%
+                        </span>
+                        {getFormIcon(prediction.form)}
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-medium">{prediction.rider.full_name}</div>
-                      <div className="text-sm text-gray-500">{prediction.rider.constructor?.name}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium mr-2">
-                      {(prediction.probability * 100).toFixed(0)}%
-                    </span>
-                    {getFormIcon(prediction.form)}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </ScrollArea>
-        <div className="text-xs text-gray-500 text-center mt-2">
-          Based on historical data and current form
-        </div>
+                  </Link>
+                ))}
+              </div>
+            </ScrollArea>
+            <div className="mt-2 text-center text-xs text-muted-foreground">Calcul : historique depuis 2018, forme, moto, circuit et météo</div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
