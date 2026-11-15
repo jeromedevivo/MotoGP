@@ -44,6 +44,8 @@ export interface Event {
   date_start: string;
   date_end: string;
   status: string;
+  season_id?: string;
+  event_files?: Record<string, string | null>;
 }
 
 export interface Session {
@@ -76,6 +78,35 @@ export interface Rider {
   // Custom property for predictions
   probability?: number;
   form?: "ascending" | "descending" | "stable";
+  picture?: string;
+  number_picture?: string;
+  birth_date?: string;
+  nickname?: string;
+  official?: boolean;
+  legacy_id?: number;
+  birth_city?: string;
+  biography?: Record<string, unknown>;
+  physical_attributes?: { height?: number; weight?: number };
+  legend?: boolean;
+  wildcard?: boolean;
+  injured?: boolean;
+  statistics?: RiderSeasonStatistic[];
+  career_stats?: Record<string, unknown> | null;
+  category?: { id: string; name: string; legacy_id?: number };
+}
+
+export interface RiderSeasonStatistic {
+  season: string;
+  category: string;
+  constructor: string;
+  starts: number;
+  first_position: number;
+  second_position: number;
+  third_position: number;
+  podiums: number;
+  poles: number;
+  points: number;
+  position: number;
 }
 
 export interface Team {
@@ -125,5 +156,16 @@ export interface Prediction {
   rider: Rider;
   probability: number;
   form: "ascending" | "descending" | "stable";
+  factors?: {
+    championship?: number;
+    recent_form?: number;
+    bike?: number;
+    bike_championship_position?: number;
+    circuit?: number;
+    recent_results?: number[];
+    historical_circuit_results?: number[];
+    historical_circuit_dates?: string[];
+    constructor_points?: number;
+    constructor_name?: string;
+  };
 }
-

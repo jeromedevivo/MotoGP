@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Category, RiderStanding } from "@/types";
 import { getCurrentSeason, getCategories, getRiderStandings, getConstructorStandings, getTeamStandings } from "@/lib/api";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const StandingsPage: React.FC = () => {
   const { toast } = useToast();
@@ -111,13 +111,13 @@ const StandingsPage: React.FC = () => {
   const getPositionBadgeClass = (position: number) => {
     switch (position) {
       case 1:
-        return "bg-yellow-400 text-black";
+        return "bg-yellow-400 text-foreground";
       case 2:
-        return "bg-gray-300 text-black";
+        return "bg-muted text-foreground";
       case 3:
         return "bg-amber-700 text-white";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-background text-foreground";
     }
   };
 
@@ -131,7 +131,7 @@ const StandingsPage: React.FC = () => {
       !!selectedCategoryId && !!seasonQuery.data?.id;
 
   return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <Header />
 
         <main className="container mx-auto px-4 py-6">
@@ -183,7 +183,7 @@ const StandingsPage: React.FC = () => {
                                       </TableCell>
                                       <TableCell className="font-medium">
                                         {standing.rider.full_name}
-                                        <div className="text-xs text-gray-500 md:hidden">
+                                        <div className="text-xs text-muted-foreground md:hidden">
                                           {standing.team?.name}
                                         </div>
                                       </TableCell>
@@ -199,7 +199,7 @@ const StandingsPage: React.FC = () => {
                           </div>
                       ) : (
                           <div className="text-center py-8">
-                            <p className="text-gray-500">
+                            <p className="text-muted-foreground">
                               {category.name} standings coming soon
                             </p>
                           </div>
@@ -251,7 +251,7 @@ const StandingsPage: React.FC = () => {
                     </div>
                 ) : (
                     <div className="text-center py-8">
-                      <p className="text-gray-500">Constructor standings coming soon</p>
+                      <p className="text-muted-foreground">Constructor standings coming soon</p>
                     </div>
                 )}
               </CardContent>
@@ -290,7 +290,7 @@ const StandingsPage: React.FC = () => {
                                 </TableCell>
                                 <TableCell className="font-medium">
                                   {standing.team_name}
-                                  <div className="text-xs text-gray-500">
+                                  <div className="text-xs text-muted-foreground">
                                     {standing.constructor_name}
                                   </div>
                                 </TableCell>
@@ -302,7 +302,7 @@ const StandingsPage: React.FC = () => {
                     </div>
                 ) : (
                     <div className="text-center py-8">
-                      <p className="text-gray-500">Team standings coming soon</p>
+                      <p className="text-muted-foreground">Team standings coming soon</p>
                     </div>
                 )}
               </CardContent>

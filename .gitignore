@@ -43,3 +43,17 @@ dist/
 *.old
 *.orig
 *.rej
+
+# Cached MotoGP history dataset
+backend/data/
+
+# Impeccable design tooling (local only)
+.impeccable/
+
+# Local notes and docs (not versioned)
+/*.md
+!/README.md
+/docs/*.tdd.md
+/Modelfile
+/test-components.tsx
+/validate-app.ts

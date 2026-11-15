@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +8,7 @@ import Calendar from "./pages/Calendar";
 import Standings from "./pages/Standings";
 import Riders from "./pages/Riders";
 import RiderDetail from "./pages/RiderDetail";
+import RiderStats from "./pages/RiderStats";
 import EventDetail from "./pages/EventDetail";
 import Predictions from "./pages/Predictions";
 import LiveTiming from "./pages/LiveTiming";
@@ -35,6 +35,7 @@ const App = () => (
           <Route path="/standings" element={<Standings />} />
           <Route path="/riders" element={<Riders />} />
           <Route path="/riders/:id" element={<RiderDetail />} />
+          <Route path="/riders/:id/stats" element={<RiderStats />} />
           <Route path="/events/:id" element={<EventDetail />} />
           <Route path="/predictions" element={<Predictions />} />
           <Route path="/live-timing" element={<LiveTiming />} />

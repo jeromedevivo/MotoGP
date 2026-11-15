@@ -4,7 +4,7 @@ import { Event } from "@/types";
 import RaceCard from "./RaceCard";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import {
   Carousel,
   CarouselContent,
@@ -31,10 +31,10 @@ const UpcomingRaces: React.FC = () => {
       setRaces(upcomingEvents);
     } catch (err) {
       console.error("Failed to fetch upcoming races:", err);
-      setError("Failed to load upcoming races. Please try again later.");
+      setError("Impossible de charger les prochains Grands Prix. Réessayez plus tard.");
       toast({
         title: "Error",
-        description: "Failed to load upcoming races",
+        description: "Grands Prix indisponibles",
         variant: "destructive",
       });
     } finally {
@@ -48,8 +48,8 @@ const UpcomingRaces: React.FC = () => {
 
   const handleRefresh = () => {
     toast({
-      title: "Refreshing data",
-      description: "Updating race information...",
+      title: "Actualisation",
+      description: "Mise à jour des courses…",
     });
     fetchRaces();
   };
@@ -57,23 +57,23 @@ const UpcomingRaces: React.FC = () => {
   return (
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Upcoming Races</h2>
+          <h2 className="text-2xl font-bold">Prochains Grands Prix</h2>
           <Link to="/calendar">
             <Button variant="ghost" className="text-racing-red flex items-center">
-              View Calendar <ChevronRight size={16} className="ml-1" />
+              Calendrier complet <ChevronRight size={16} className="ml-1" />
             </Button>
           </Link>
         </div>
 
         {loading ? (
-            <div className="col-span-full text-center p-8 border border-dashed border-gray-300 rounded-lg">
+            <div className="col-span-full text-center p-8 border border-dashed border-border rounded-lg">
               <p>Loading upcoming races...</p>
             </div>
         ) : error ? (
-            <div className="col-span-full text-center p-8 border border-dashed border-gray-300 rounded-lg">
+            <div className="col-span-full text-center p-8 border border-dashed border-border rounded-lg">
               <p>{error}</p>
               <Button onClick={handleRefresh} className="mt-4">
-                Retry
+                Réessayer
               </Button>
             </div>
         ) : races.length > 0 ? (
@@ -97,7 +97,7 @@ const UpcomingRaces: React.FC = () => {
               </div>
             </Carousel>
         ) : (
-            <div className="col-span-full text-center p-8 border border-dashed border-gray-300 rounded-lg">
+            <div className="col-span-full text-center p-8 border border-dashed border-border rounded-lg">
               <p>No upcoming races found.</p>
               <Button onClick={handleRefresh} className="mt-4">
                 Refresh

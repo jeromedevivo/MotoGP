@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getCurrentSeason, getCategories, getRiderStandings } from "@/lib/api";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const RiderStandings: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -43,14 +43,27 @@ const RiderStandings: React.FC = () => {
 
           // Get standings for default category
           const standingsData = await getRiderStandings(season.id, categoriesData[0].id);
-          setStandings(standingsData);
+          // Ensure we have valid data
+          if (Array.isArray(standingsData)) {
+            setStandings(standingsData);
+          } else {
+            console.warn("Unexpected standings data format:", standingsData);
+            setStandings([]);
+          }
+        } else {
+          setStandings([]);
         }
       } catch (err) {
         console.error("Failed to fetch standings data:", err);
-        setError("Failed to load standings data. Please try again later.");
+        // Check if it's a network error
+        if (err instanceof TypeError && err.message.includes('fetch')) {
+          setError("Le serveur ne répond pas : vérifiez que le backend est lancé.");
+        } else {
+          setError("Impossible de charger le classement. Réessayez plus tard.");
+        }
         toast({
           title: "Error",
-          description: "Failed to load standings data",
+          description: "Classement indisponible",
           variant: "destructive",
         });
       } finally {
@@ -75,7 +88,7 @@ const RiderStandings: React.FC = () => {
         console.error("Failed to fetch standings for category:", err);
         toast({
           title: "Error",
-          description: "Failed to load standings for this category",
+          description: "Classement indisponible pour cette catégorie",
           variant: "destructive",
         });
       } finally {
@@ -89,23 +102,44 @@ const RiderStandings: React.FC = () => {
   const getPositionBadgeClass = (position: number) => {
     switch (position) {
       case 1:
-        return "bg-yellow-400 text-black";
+        return "bg-yellow-400 text-foreground";
       case 2:
-        return "bg-gray-300 text-black";
+        return "bg-muted text-foreground";
       case 3:
         return "bg-amber-700 text-white";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-background text-foreground";
     }
   };
 
+  // Helper function to safely get rider data
+  const getRiderName = (standing: any) => {
+    if (!standing) return "Unknown Rider";
+    
+    // Try different possible field names for rider name
+    return standing.rider?.full_name || 
+           standing.rider?.name || 
+           standing.full_name || 
+           standing.name || 
+           "Unknown Rider";
+  };
+
+  // Helper function to safely get team data
+  const getTeamName = (standing: any) => {
+    if (!standing) return "";
+    
+    return standing.team?.name || 
+           standing.constructor?.name || 
+           "Unknown Team";
+  };
+
   return (
-      <div className="bg-white rounded-lg border border-border p-4">
+      <div className="bg-card rounded-lg border border-border p-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Championship Standings</h2>
+          <h2 className="text-xl font-bold">Classement du championnat</h2>
           <Link to="/standings">
             <Button variant="ghost" size="sm" className="text-racing-red flex items-center">
-              Full Standings <ChevronRight size={14} className="ml-1" />
+              Classement complet <ChevronRight size={14} className="ml-1" />
             </Button>
           </Link>
         </div>
@@ -131,9 +165,9 @@ const RiderStandings: React.FC = () => {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="w-12">Pos</TableHead>
-                              <TableHead>Rider</TableHead>
-                              <TableHead className="hidden md:table-cell">Team</TableHead>
+                              <TableHead className="w-12">Pos.</TableHead>
+                              <TableHead>Pilote</TableHead>
+                              <TableHead className="hidden md:table-cell">Équipe</TableHead>
                               <TableHead className="text-right">Points</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -155,7 +189,7 @@ const RiderStandings: React.FC = () => {
                                       <TableCell className="font-medium">
                                         <Link to={`/riders/${standing.rider.id}`} className="hover:text-racing-red">
                                           {standing.rider.full_name}
-                                          <div className="text-xs text-gray-500">
+                                          <div className="text-xs text-muted-foreground">
                                             {standing.constructor?.name}
                                           </div>
                                         </Link>
@@ -181,7 +215,7 @@ const RiderStandings: React.FC = () => {
               ))}
             </Tabs>
         ) : (
-            <div className="text-center py-8">No categories available</div>
+            <div className="text-center py-8">Aucune catégorie disponible</div>
         )}
       </div>
   );

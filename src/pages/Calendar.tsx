@@ -1,186 +1,101 @@
-
-import React, { useState, useEffect } from "react";
+import React from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Calendar as CalendarIcon, Download, MapPin } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getCurrentSeason, getUpcomingEvents, getPastEvents, generateCalendarICS, downloadICSFile } from "@/lib/api";
-import { Event } from "@/types";
-import { Calendar as CalendarIcon, MapPin, Calendar as DateIcon } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { format } from "date-fns";
-import { Link } from "react-router-dom";
+import { getCurrentSeason, getEvents } from "@/lib/api";
 
 const CalendarPage: React.FC = () => {
-  const { toast } = useToast();
-  const [viewMode, setViewMode] = useState<"upcoming" | "past">("upcoming");
-  const [selectedYear, setSelectedYear] = useState<string>("");
-
-  // Fetch current season
-  const seasonQuery = useQuery({
-    queryKey: ['current-season'],
-    queryFn: getCurrentSeason
-  });
-
-  // Set selected year when current season loads
-  useEffect(() => {
-    if (seasonQuery.data?.id && !selectedYear) {
-      setSelectedYear(seasonQuery.data.id);
-    }
-  }, [seasonQuery.data, selectedYear]);
-
-  // Fetch events based on view mode
+  const seasonQuery = useQuery({ queryKey: ["current-season"], queryFn: getCurrentSeason });
   const eventsQuery = useQuery({
-    queryKey: ['events', selectedYear, viewMode],
-    queryFn: () => viewMode === "upcoming" 
-      ? getUpcomingEvents(selectedYear) 
-      : getPastEvents(selectedYear),
-    enabled: !!selectedYear,
+    queryKey: ["events", seasonQuery.data?.id],
+    queryFn: () => getEvents(seasonQuery.data!.id),
+    enabled: !!seasonQuery.data?.id,
   });
+  const events = [...(eventsQuery.data || [])]
+    .filter((event) => {
+      const rawEvent = event as typeof event & { test?: boolean };
+      return !rawEvent.test && !event.name.toLowerCase().includes("test");
+    })
+    .sort(
+    (a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime(),
+  );
 
-  // Handle calendar export
-  const handleAddToCalendar = async (event: Event) => {
-    try {
-      const calendarData = await generateCalendarICS(event.id);
-      downloadICSFile(calendarData.ical, calendarData.eventName);
-      
-      toast({
-        title: "Calendar exported",
-        description: "The event has been successfully exported to your calendar",
-      });
-    } catch (error) {
-      console.error("Calendar export error:", error);
-      toast({
-        title: "Export failed",
-        description: "Failed to export the event to calendar",
-        variant: "destructive",
-      });
-    }
+  const exportCalendar = () => {
+    const lines = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//MotoGP Insights//EN",
+      ...events.flatMap((event) => [
+        "BEGIN:VEVENT",
+        `UID:${event.id}@motogp-insights`,
+        `DTSTART:${format(new Date(event.date_start), "yyyyMMdd'T'HHmmss'Z'")}`,
+        `DTEND:${format(new Date(event.date_end), "yyyyMMdd'T'HHmmss'Z'")}`,
+        `SUMMARY:${event.sponsored_name || event.name}`,
+        `LOCATION:${event.circuit?.name || ""}, ${event.country?.name || ""}`,
+        "END:VEVENT",
+      ]),
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const url = URL.createObjectURL(new Blob([lines], { type: "text/calendar" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `motogp-${seasonQuery.data?.year || "calendar"}.ics`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
-      
       <main className="container mx-auto px-4 py-6">
-        <h1 className="text-3xl font-bold mb-6">Race Calendar</h1>
-        
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div className="flex items-center space-x-2">
-            <Button 
-              variant={viewMode === "upcoming" ? "default" : "outline"}
-              onClick={() => setViewMode("upcoming")}
-            >
-              Upcoming
-            </Button>
-            <Button 
-              variant={viewMode === "past" ? "default" : "outline"}
-              onClick={() => setViewMode("past")}
-            >
-              Past
-            </Button>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Calendrier MotoGP</h1>
+            <p className="text-muted-foreground">Saison {seasonQuery.data?.year || "..."}</p>
           </div>
-          
-          <div className="w-full md:w-auto">
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="Select season" />
-              </SelectTrigger>
-              <SelectContent>
-                {seasonQuery.data && (
-                  <SelectItem value={seasonQuery.data.id} key={seasonQuery.data.id}>
-                    {seasonQuery.data.year} Season {seasonQuery.data.current ? "(Current)" : ""}
-                  </SelectItem>
-                )}
-                {/* Add more years here from API */}
-              </SelectContent>
-            </Select>
-          </div>
+          <Button onClick={exportCalendar} disabled={!events.length}>
+            <Download size={16} className="mr-2" /> Exporter
+          </Button>
         </div>
-        
-        {eventsQuery.isLoading ? (
-          <div className="flex justify-center items-center py-20">
-            <div className="w-12 h-12 border-4 border-racing-red border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : eventsQuery.error ? (
-          <div className="text-center p-8 border border-red-200 rounded-lg bg-red-50">
-            <p className="text-red-600">Failed to load calendar data. Please try again later.</p>
-            <Button onClick={() => eventsQuery.refetch()} className="mt-4">
-              Retry
-            </Button>
-          </div>
-        ) : eventsQuery.data && eventsQuery.data.length > 0 ? (
-          <div className="space-y-6">
-            {eventsQuery.data.map((event: Event) => {
-              const startDate = new Date(event.date_start);
-              const endDate = new Date(event.date_end);
-              
-              return (
-                <Card key={event.id} className="overflow-hidden">
-                  <div className="grid grid-cols-1 md:grid-cols-4">
-                    <div className="p-6 md:border-r">
-                      <div className="flex flex-col items-center md:items-start">
-                        <DateIcon size={24} className="mb-2 text-racing-red" />
-                        <h3 className="text-xl font-bold mb-1">{format(startDate, "dd")}-{format(endDate, "dd")}</h3>
-                        <p className="text-gray-500">{format(startDate, "MMMM yyyy")}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="p-6 md:col-span-2">
-                      <h2 className="text-xl font-bold mb-2">
-                        {event.sponsored_name || event.name}
-                      </h2>
-                      
-                      <div className="flex items-start space-x-2">
-                        <MapPin size={18} className="text-gray-400 mt-0.5 flex-shrink-0" />
+        <Card>
+          <CardHeader><CardTitle>Courses de la saison</CardTitle></CardHeader>
+          <CardContent>
+            {eventsQuery.isLoading && <p className="py-8 text-center">Chargement du calendrier...</p>}
+            {eventsQuery.error && <p className="py-8 text-center text-red-600">Impossible de charger le calendrier.</p>}
+            {!eventsQuery.isLoading && !eventsQuery.error && !events.length && (
+              <p className="py-8 text-center text-muted-foreground">Aucune course disponible.</p>
+            )}
+            <div className="grid gap-3">
+              {events.map((event, index) => {
+                const upcoming = new Date(event.date_start) >= new Date();
+                return (
+                  <Link key={event.id} to={`/events/${event.id}`} className="rounded-lg border p-4 transition hover:border-racing-red">
+                    <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded bg-racing-red p-2 text-white"><CalendarIcon size={20} /></div>
                         <div>
-                          <p className="font-medium">{event.circuit?.name}</p>
-                          <p className="text-sm text-gray-500">
-                            {event.circuit?.city && `${event.circuit.city}, `}{event.country?.name}
+                          <p className="font-bold">{index + 1}. {event.sponsored_name || event.name}</p>
+                          <p className="flex items-center text-sm text-muted-foreground">
+                            <MapPin size={14} className="mr-1" /> {event.circuit?.name || "Circuit à confirmer"}{event.country?.name ? `, ${event.country.name}` : ""}
                           </p>
                         </div>
                       </div>
-                      
-                      <div className="mt-4 flex items-center">
-                        <Badge className="capitalize">{event.status}</Badge>
+                      <div className="text-left md:text-right">
+                        <p className="font-medium">{format(new Date(event.date_start), "dd MMMM yyyy", { locale: fr })}</p>
+                        <p className={upcoming ? "text-green-600" : "text-muted-foreground"}>{upcoming ? "À venir" : "Terminée"}</p>
                       </div>
                     </div>
-                    
-                    <div className="p-6 bg-gray-50 flex flex-col justify-center space-y-3">
-                      <Link to={`/events/${event.id}`}>
-                        <Button className="w-full bg-racing-red hover:bg-racing-red/90">
-                          View Details
-                        </Button>
-                      </Link>
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={() => handleAddToCalendar(event)}
-                      >
-                        <CalendarIcon size={16} className="mr-2" />
-                        Add to Calendar
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center p-12 border border-dashed border-gray-300 rounded-lg">
-            <p className="text-gray-500 mb-4">No {viewMode} races found for this season.</p>
-            {viewMode === "upcoming" && (
-              <Button onClick={() => setViewMode("past")}>
-                View Past Races
-              </Button>
-            )}
-          </div>
-        )}
+                  </Link>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </main>
-      
       <Footer />
     </div>
   );
